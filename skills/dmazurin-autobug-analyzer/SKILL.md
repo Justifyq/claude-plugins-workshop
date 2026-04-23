@@ -1,6 +1,6 @@
 ---
 name: dmazurin-autobug-analyzer
-description: Analyzes Sentry autobugs — fetches the issue and its stack trace, finds root cause in source code, then recommends and applies the best fix: weaken logging (transient errors), fix code in-place (small obvious bugs), or create a Yandex Tracker ticket with Sentry ignore for N days (complex issues). Always invoke when the user says "разбери автобаг", "проанализируй sentry issue", "что делать с автобагом", "посмотри автобаг", pastes a Sentry issue URL, or asks what to do with an error from Sentry.
+description: Analyzes Sentry autobugs — fetches the issue and its stack trace, finds root cause in source code, then recommends the best fix with explicit user approval before acting: weaken logging (transient errors), fix code in-place (small obvious bugs), or create a Yandex Tracker ticket with Sentry ignore for 30 days (complex issues). Usage: /dmazurin-autobug-analyzer <sentry-url>. Always invoke when the user says "разбери автобаг", "проанализируй sentry issue", "что делать с автобагом", "посмотри автобаг", pastes a Sentry issue URL, or asks what to do with an error from Sentry.
 compatibility:
   mcps:
     - sentry       # setup: /mcp-setup:sentry
@@ -21,10 +21,15 @@ This skill requires the Sentry MCP server. If `mcp__sentry__*` tools are unavail
 
 ## Step 1 — Gather inputs
 
-If not already provided by the user, ask for:
-- **Sentry issue** — URL (e.g. `https://autobugs.mindbox.ru/organizations/mindbox/issues/12345/`) or numeric ID
+The Sentry issue URL or ID must be passed as an argument when invoking the skill:
+```
+/dmazurin-autobug-analyzer https://autobugs.mindbox.ru/organizations/mindbox/issues/12345/
+```
 
-That's the only required input. Derive everything else from the issue itself.
+If the argument is missing, tell the user:
+> Укажи URL или ID автобага: `/dmazurin-autobug-analyzer <URL>`
+
+Do not ask for the URL interactively — require it upfront.
 
 ## Step 2 — Fetch Sentry data
 
@@ -142,13 +147,16 @@ Based on the issue data and code, choose **one** action. Explain your reasoning 
 
 ## Step 5 — Confirm and execute
 
-Before applying any change, show the user:
+Show the user the diagnosis and plan, then **wait for explicit approval before doing anything**:
+
 - **Диагноз:** one-sentence root cause
 - **Рекомендация:** which option and why
-- **Что будет сделано:** specific action
+- **Что будет сделано:** specific action (file path, diff outline, or ticket fields)
 
-For Option A/B — show the plan and proceed (user can revert).
-For Option C — confirm the tracker queue before creating the ticket.
+Then ask:
+> Применить? (да / нет / изменить)
+
+Only proceed after the user confirms. If the user says "нет" or "изменить" — stop or adjust the plan accordingly. Do not apply changes speculatively.
 
 ## Step 6 — Summary
 
